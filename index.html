@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Presença – Escola da Terra MS</title>
+<link rel="stylesheet" href="assets/estilo.css">
+<style>
+  main{max-width:480px;margin:0 auto;padding:20px 16px 40px;display:flex;flex-direction:column;gap:16px}
+  .encontro{background:var(--creme);border-radius:14px;padding:14px 16px}
+  .encontro .k{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--laranja)}
+  .encontro b{display:block;font-family:Georgia,serif;font-size:19px;color:var(--marrom);margin-top:2px}
+  #cpf{font-size:24px;letter-spacing:1px;text-align:center}
+  .quem{display:flex;flex-direction:column;gap:6px;text-align:center}
+  .quem .nome{font-family:Georgia,serif;font-size:24px;color:var(--marrom)}
+  .sucesso{text-align:center;padding:28px 20px;border-radius:18px;background:var(--verde);color:#fff}
+  .sucesso svg{width:72px;height:72px}
+  .sucesso h2{color:#fff;font-size:26px;margin:8px 0 4px}
+  .botoes{display:flex;flex-direction:column;gap:10px}
+</style>
+</head>
+<body>
+<div class="topo">
+  <svg class="flor" viewBox="0 0 24 24" aria-hidden="true"><g fill="#F2B21B"><ellipse cx="12" cy="4.5" rx="2.4" ry="4.2"/><ellipse cx="12" cy="4.5" rx="2.4" ry="4.2" transform="rotate(45 12 12)"/><ellipse cx="12" cy="4.5" rx="2.4" ry="4.2" transform="rotate(90 12 12)"/><ellipse cx="12" cy="4.5" rx="2.4" ry="4.2" transform="rotate(135 12 12)"/><ellipse cx="12" cy="4.5" rx="2.4" ry="4.2" transform="rotate(180 12 12)"/><ellipse cx="12" cy="4.5" rx="2.4" ry="4.2" transform="rotate(225 12 12)"/><ellipse cx="12" cy="4.5" rx="2.4" ry="4.2" transform="rotate(270 12 12)"/><ellipse cx="12" cy="4.5" rx="2.4" ry="4.2" transform="rotate(315 12 12)"/></g><circle cx="12" cy="12" r="4.2" fill="#6B3A16"/></svg>
+  <b>Escola da Terra MS · Presença</b>
+</div>
+<main>
+  <div id="carregando" class="aviso info"><span class="spinner"></span> Carregando…</div>
+  <div id="erro" class="aviso erro oculto" role="alert"></div>
+
+  <div id="encontro" class="encontro oculto"><div class="k">Registro de presença</div><b id="tituloEncontro"></b></div>
+
+  <form id="passoCpf" class="cartao oculto" autocomplete="off">
+    <label for="cpf">Digite o seu CPF</label>
+    <input id="cpf" inputmode="numeric" placeholder="000.000.000-00" maxlength="14" required>
+    <p class="muted">Seu CPF é usado só para conferir a lista do curso. Ele não fica salvo neste aparelho.</p>
+    <button type="submit" id="btContinuar" style="width:100%">Continuar</button>
+  </form>
+
+  <div id="passoConfirmar" class="cartao oculto">
+    <div class="quem">
+      <span class="muted">Confirme se é você:</span>
+      <span class="nome" id="quemNome"></span>
+      <span id="quemCpf"></span>
+      <span class="muted" id="quemMunicipio"></span>
+    </div>
+    <div class="botoes" style="margin-top:18px">
+      <button class="ok" id="btConfirmar">Sou eu, confirmar presença</button>
+      <button class="sec" id="btVoltar">Não sou eu, voltar</button>
+    </div>
+  </div>
+
+  <div id="passoOk" class="sucesso oculto" role="status">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>
+    <h2 id="okTitulo">Presença registrada!</h2>
+    <div id="okDetalhe"></div>
+    <div id="okQuem" style="margin-top:10px;font-weight:700"></div>
+  </div>
+
+  <p class="muted" style="text-align:center">Problemas com o celular, a bateria ou a internet? Procure a equipe: ela registra a sua presença.</p>
+</main>
+<script src="assets/config.js"></script>
+<script src="assets/api.js"></script>
+<script>
+const q = new URLSearchParams(location.search);
+const encontro = q.get('e'), codigo = q.get('c');
+const $ = id => document.getElementById(id);
+const mostra = (...ids) => ['carregando','erro','encontro','passoCpf','passoConfirmar','passoOk'].forEach(i => $(i).classList.toggle('oculto', !ids.includes(i)));
+function erro(msg, ...manter) { $('erro').textContent = msg; mostra('erro', ...manter); }
+
+async function iniciar() {
+  if (!encontro || !codigo) return erro('Para registrar a presença, leia o QR code que está no telão do encontro.');
+  try {
+    const r = await api('checkin_info', { encontro, codigo });
+    if (!r.ok) return erro(r.erro);
+    $('tituloEncontro').textContent = tituloEncontro(r.encontro);
+    mostra('encontro', 'passoCpf'); $('cpf').focus();
+  } catch (e) { erro(e.message); }
+}
+$('cpf').addEventListener('input', e => { e.target.value = mascaraCpfDigitando(e.target.value); });
+$('passoCpf').addEventListener('submit', async e => {
+  e.preventDefault();
+  const cpf = soDigitos($('cpf').value);
+  if (cpf.length !== 11) return erro('Digite os 11 números do CPF.', 'encontro', 'passoCpf');
+  $('btContinuar').disabled = true; $('btContinuar').textContent = 'Conferindo…';
+  try {
+    const r = await api('checkin', { encontro, codigo, cpf });
+    if (!r.ok) return erro(r.erro, 'encontro', 'passoCpf');
+    if (r.jaRegistrada) return sucesso(r);
+    $('quemNome').textContent = r.pessoa.nome || (r.pessoa.tipo === 'tutor' ? 'Tutor(a)' : 'Cursista');
+    $('quemCpf').textContent = 'CPF ' + r.pessoa.cpf;
+    $('quemMunicipio').textContent = r.pessoa.municipio || '';
+    mostra('encontro', 'passoConfirmar');
+  } catch (err) { erro(err.message, 'encontro', 'passoCpf'); }
+  finally { $('btContinuar').disabled = false; $('btContinuar').textContent = 'Continuar'; }
+});
+$('btVoltar').addEventListener('click', () => { $('cpf').value = ''; mostra('encontro', 'passoCpf'); $('cpf').focus(); });
+$('btConfirmar').addEventListener('click', async () => {
+  $('btConfirmar').disabled = true; $('btConfirmar').textContent = 'Registrando…';
+  try {
+    const r = await api('checkin', { encontro, codigo, cpf: soDigitos($('cpf').value), confirmar: true });
+    if (!r.ok) return erro(r.erro, 'encontro', 'passoCpf');
+    sucesso(r);
+  } catch (err) { erro(err.message, 'encontro', 'passoConfirmar'); }
+  finally { $('btConfirmar').disabled = false; $('btConfirmar').textContent = 'Sou eu, confirmar presença'; }
+});
+function sucesso(r) {
+  $('cpf').value = '';
+  $('okTitulo').textContent = r.jaRegistrada ? 'Presença já registrada' : 'Presença registrada!';
+  $('okDetalhe').textContent = tituloEncontro(r.encontro) + ' · às ' + String(r.hora).slice(11);
+  $('okQuem').textContent = [r.pessoa.nome, r.pessoa.cpf, r.pessoa.municipio].filter(Boolean).join(' · ');
+  mostra('encontro', 'passoOk');
+}
+iniciar();
+</script>
+</body>
+</html>

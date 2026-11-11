@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Equipe – Presença Escola da Terra MS</title>
+<link rel="stylesheet" href="assets/estilo.css">
+<style>
+  .wrap{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
+  .topo .sp{flex:1}
+  .topo button{background:transparent;border:2px solid #fff;padding:6px 12px;min-height:34px;font-size:14px}
+  nav.abas{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 16px}
+  nav.abas button{background:#fff;color:var(--marrom);border:2px solid var(--linha)}
+  nav.abas button.on{background:var(--marrom);color:#fff;border-color:var(--marrom)}
+  .linha{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+  .linha > div{flex:1 1 160px}
+  .grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .num{font-family:Georgia,serif;font-size:30px;font-weight:700;color:var(--marrom)}
+  .secao{display:flex;flex-direction:column;gap:14px}
+  .acoes{display:flex;gap:6px;flex-wrap:wrap}
+  #login{max-width:420px;margin:40px auto}
+  #telao{position:fixed;inset:0;background:var(--creme2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:50;padding:20px;text-align:center}
+  #telao h1{font-size:clamp(24px,4vw,46px)}
+  #telaoQr{background:#fff;padding:18px;border-radius:18px;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+  #telaoQr svg{width:min(62vh,82vw);height:min(62vh,82vw);display:block}
+  #telao .conta{font-size:clamp(18px,2.4vw,28px);color:var(--marrom)}
+  .barra{height:6px;background:var(--creme);border-radius:3px;width:min(62vh,82vw);overflow:hidden}
+  .barra i{display:block;height:100%;background:var(--girassol);transition:width 1s linear}
+  dialog{border:0;border-radius:16px;padding:20px;max-width:440px;width:92vw}
+  dialog::backdrop{background:rgba(0,0,0,.35)}
+  tr.presente td{background:#F3F9EF}
+  @media print{ .naoimprime{display:none!important} }
+</style>
+</head>
+<body>
+<div class="topo naoimprime">
+  <svg class="flor" viewBox="0 0 24 24" aria-hidden="true"><g fill="#F2B21B"><ellipse cx="12" cy="4.5" rx="2.4" ry="4.2"/><ellipse cx="12" cy="4.5" rx="2.4" ry="4.2" transform="rotate(45 12 12)"/><ellipse cx="12" cy="4.5" rx="2.4" ry="4.2" transform="rotate(90 12 12)"/><ellipse cx="12" cy="4.5" rx="2.4" ry="4.2" transform="rotate(135 12 12)"/><ellipse cx="12" cy="4.5" rx="2.4" ry="4.2" transform="rotate(180 12 12)"/><ellipse cx="12" cy="4.5" rx="2.4" ry="4.2" transform="rotate(225 12 12)"/><ellipse cx="12" cy="4.5" rx="2.4" ry="4.2" transform="rotate(270 12 12)"/><ellipse cx="12" cy="4.5" rx="2.4" ry="4.2" transform="rotate(315 12 12)"/></g><circle cx="12" cy="12" r="4.2" fill="#6B3A16"/></svg>
+  <b>Escola da Terra MS · Painel da equipe</b><span class="sp"></span>
+  <span id="usuario" class="oculto"></span><button id="btSair" class="oculto">Sair</button>
+</div>
+
+<!-- LOGIN -->
+<section id="login" class="cartao secao oculto">
+  <h2>Entrar</h2>
+  <div id="loginErro" class="aviso erro oculto" role="alert"></div>
+  <form id="fEmail" class="secao">
+    <div><label for="email">Seu e-mail</label><input id="email" type="email" autocomplete="email" required></div>
+    <button type="submit">Receber código por e-mail</button>
+  </form>
+  <form id="fCodigo" class="secao oculto">
+    <div class="aviso info" id="loginMsg"></div>
+    <div><label for="codigo">Código de 6 números</label><input id="codigo" inputmode="numeric" maxlength="6" autocomplete="one-time-code" required></div>
+    <button type="submit">Entrar</button>
+    <button type="button" class="sec" id="btOutroEmail">Usar outro e-mail</button>
+  </form>
+  <p class="muted">O acesso fica salvo neste aparelho por 30 dias. Faça o login com antecedência, e não no dia do encontro.</p>
+</section>
+
+<!-- APP -->
+<div id="app" class="wrap oculto">
+  <nav class="abas naoimprime">
+    <button data-aba="chamada" class="on">Chamada</button>
+    <button data-aba="encontros">Encontros</button>
+    <button data-aba="frequencia">Frequência</button>
+    <button data-aba="pessoas">Pessoas</button>
+    <button data-aba="importar">Importar</button>
+  </nav>
+  <div id="msg" class="aviso oculto naoimprime" role="status" style="margin-bottom:14px"></div>
+
+  <!-- CHAMADA -->
+  <section data-pane="chamada" class="secao">
+    <div class="linha">
+      <div style="flex:3 1 280px"><label for="selEncontro">Encontro</label><select id="selEncontro"></select></div>
+      <div><label for="filtroMun">Município</label><select id="filtroMun"><option value="">Todos</option></select></div>
+      <div><label for="busca">Buscar nome ou CPF</label><input id="busca" placeholder="Nome ou parte do CPF"></div>
+    </div>
+    <div class="linha">
+      <button id="btAbrir" class="ok">Abrir chamada</button>
+      <button id="btFechar" class="perigo oculto">Fechar chamada</button>
+      <button id="btTelao" class="sec">Mostrar QR no telão</button>
+      <button id="btImprimir" class="sec">Imprimir lista para assinatura</button>
+      <button id="btRecarregar" class="sec">Atualizar</button>
+    </div>
+    <div class="grade" id="resumoChamada"></div>
+    <div class="cartao" style="padding:12px">
+      <div class="linha" style="align-items:center">
+        <strong style="flex:1 1 auto">Lançar em lote os marcados:</strong>
+        <select id="loteForma" style="flex:0 1 220px"><option value="lista_fisica">Lista física assinada</option><option value="tempo_comunidade">Tempo Comunidade</option><option value="manual">Manual</option></select>
+        <input id="loteMotivo" placeholder="Observação (opcional)" style="flex:1 1 200px">
+        <button id="btLote" class="peq">Registrar marcados</button>
+      </div>
+    </div>
+    <div class="rolagem"><table>
+      <thead><tr><th><input type="checkbox" id="marcarTodos" aria-label="Marcar todos" style="width:auto;min-height:0"></th><th>Nome</th><th>CPF</th><th>Município</th><th>Tipo</th><th>Presença</th><th></th></tr></thead>
+      <tbody id="tbChamada"></tbody>
+    </table></div>
+  </section>
+
+  <!-- ENCONTROS -->
+  <section data-pane="encontros" class="secao oculto">
+    <form id="fEncontro" class="cartao secao">
+      <h3 id="tituloFormEnc">Novo encontro</h3>
+      <input type="hidden" id="encId">
+      <div class="linha">
+        <div><label for="encRoca">Roça</label><select id="encRoca"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
+        <div><label for="encData">Data</label><input id="encData" type="date" required></div>
+        <div><label for="encTipo">Tipo</label><select id="encTipo"><option value="TU">Tempo Universidade (TU)</option><option value="TC">Tempo Escola-Comunidade (TC)</option></select></div>
+        <div><label for="encCH">Carga horária (h)</label><input id="encCH" type="number" min="0.5" max="60" step="0.5" required></div>
+        <div style="flex:2 1 220px"><label for="encDesc">Descrição (opcional)</label><input id="encDesc" placeholder="Ex.: 1º dia – manhã e tarde"></div>
+      </div>
+      <div class="linha"><button type="submit">Salvar encontro</button><button type="button" class="sec" id="btEncLimpar">Limpar</button></div>
+      <p class="muted">Cada chamada é um encontro. Hoje é 1 chamada por dia; para separar manhã e tarde, cadastre dois encontros na mesma data. O Tempo Comunidade de cada Roça (10h) é um encontro do tipo TC, lançado em lote.</p>
+    </form>
+    <div class="rolagem"><table>
+      <thead><tr><th>Roça</th><th>Data</th><th>Tipo</th><th>Horas</th><th>Descrição</th><th>Chamada</th><th>Presentes</th><th></th></tr></thead>
+      <tbody id="tbEncontros"></tbody>
+    </table></div>
+    <div id="totalHoras" class="muted"></div>
+  </section>
+
+  <!-- FREQUÊNCIA -->
+  <section data-pane="frequencia" class="secao oculto">
+    <div class="grade" id="resumoFreq"></div>
+    <div class="linha">
+      <div><label for="freqMun">Município</label><select id="freqMun"><option value="">Todos</option></select></div>
+      <div><label for="freqSit">Situação</label><select id="freqSit"><option value="">Todas</option><option value="ok">Em dia</option><option value="risco">Em risco</option><option value="abaixo">Abaixo de 75%</option></select></div>
+      <div><label for="freqTipo">Tipo</label><select id="freqTipo"><option value="">Todos</option><option value="cursista">Cursistas</option><option value="tutor">Tutores</option></select></div>
+      <div style="flex:0 0 auto"><button id="btExportar" class="sec">Exportar planilha (CSV)</button></div>
+    </div>
+    <div class="rolagem"><table>
+      <thead><tr><th>Nome</th><th>CPF</th><th>Município</th><th>Tipo</th><th>Horas presentes</th><th>% até agora</th><th>% do curso</th><th>Faltas que ainda pode ter</th><th>Situação</th></tr></thead>
+      <tbody id="tbFreq"></tbody>
+    </table></div>
+    <p class="muted">Mínimo de 75% da carga horária, somando Tempo Universidade e Tempo Comunidade. "Em risco" = restam 8h ou menos de faltas permitidas.</p>
+  </section>
+
+  <!-- PESSOAS -->
+  <section data-pane="pessoas" class="secao oculto">
+    <div class="linha">
+      <div><label for="pesBusca">Buscar</label><input id="pesBusca" placeholder="Nome, município ou parte do CPF"></div>
+      <div><label for="pesCpf">Localizar pelo CPF completo</label><input id="pesCpf" inputmode="numeric" placeholder="000.000.000-00"></div>
+      <div style="flex:0 0 auto"><button id="btPesCpf" class="sec">Localizar</button></div>
+    </div>
+    <div class="rolagem"><table>
+      <thead><tr><th>Nome</th><th>CPF</th><th>Município</th><th>Tipo</th><th>Situação</th><th></th></tr></thead>
+      <tbody id="tbPessoas"></tbody>
+    </table></div>
+  </section>
+
+  <!-- IMPORTAR -->
+  <section data-pane="importar" class="secao oculto">
+    <div class="cartao secao">
+      <h3>1. Importar cursistas (CSV do SISFOR)</h3>
+      <p class="muted">Arquivo separado por ponto e vírgula com as colunas <b>CPF_CURSISTA</b> e <b>CODIGO_IBGE</b>. O arquivo é lido neste computador; o servidor guarda só o CPF mascarado e a impressão digital, nunca o CPF completo. Quem já existe é ignorado. Depois, marque os tutores na aba Pessoas.</p>
+      <input type="file" id="arqPessoas" accept=".csv,text/csv">
+      <button id="btImpPessoas" disabled>Importar</button>
+    </div>
+    <div class="cartao secao">
+      <h3>2. Completar os nomes</h3>
+      <p class="muted">Cole abaixo uma linha por pessoa no formato <b>CPF;Nome completo</b> (pode copiar duas colunas de uma planilha) ou escolha um arquivo CSV com essas duas colunas.</p>
+      <textarea id="txtNomes" rows="6" placeholder="051.541.291-05;Nome Sobrenome"></textarea>
+      <input type="file" id="arqNomes" accept=".csv,.txt,text/csv">
+      <button id="btImpNomes">Importar nomes</button>
+    </div>
+  </section>
+</div>
+
+<!-- TELÃO -->
+<div id="telao" class="oculto">
+  <h1 id="telaoTitulo"></h1>
+  <div class="conta">Aponte a câmera do celular para o QR code</div>
+  <div id="telaoQr"></div>
+  <div class="barra"><i id="telaoBarra" style="width:100%"></i></div>
+  <div class="conta"><b id="telaoPresentes">0</b> presenças registradas</div>
+  <button class="sec" id="btSairTelao">Sair do telão</button>
+</div>
+
+<!-- DIÁLOGO PRESENÇA MANUAL -->
+<dialog id="dlgManual">
+  <form method="dialog" class="secao" id="fManual">
+    <h3>Confirmar presença manual</h3>
+    <div id="dlgQuem" class="aviso info"></div>
+    <div><label for="motivoSel">Motivo</label>
+      <select id="motivoSel"><option>Sem celular</option><option>Sem bateria</option><option>Sem internet</option><option>Problema técnico no sistema</option><option>Outro</option></select></div>
+    <div><label for="motivoTxt">Detalhe (opcional)</label><input id="motivoTxt"></div>
+    <div class="linha"><button value="ok" class="ok">Confirmar presença</button><button value="cancel" class="sec" formnovalidate>Cancelar</button></div>
+  </form>
+</dialog>
+
+<script src="assets/config.js"></script>
+<script src="assets/api.js"></script>
+<script src="assets/qrcode.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const S = { token: null, encontros: [], pessoas: [], presencas: [], freq: null };
+try { S.token = localStorage.getItem('et_token'); } catch (e) {}
+
+function aviso(texto, tipo = 'ok') { const m = $('msg'); m.textContent = texto; m.className = 'aviso ' + tipo + ' naoimprime'; clearTimeout(aviso.t); aviso.t = setTimeout(() => m.classList.add('oculto'), 6000); }
+async function chama(acao, dados = {}) {
+  const r = await api(acao, { token: S.token, ...dados });
+  if (r.sessao === false) { sair(true); throw new Error(r.erro); }
+  if (!r.ok) throw new Error(r.erro);
+  return r;
+}
+async function seguro(fn) { try { return await fn(); } catch (e) { aviso(e.message, 'erro'); } }
+
+// ---------- LOGIN ----------
+function telaLogin() { $('login').classList.remove('oculto'); $('app').classList.add('oculto'); $('usuario').classList.add('oculto'); $('btSair').classList.add('oculto'); }
+$('fEmail').addEventListener('submit', async e => {
+  e.preventDefault(); $('loginErro').classList.add('oculto');
+  try {
+    const r = await api('login_pedir', { email: $('email').value });
+    if (!r.ok) throw new Error(r.erro);
+    $('loginMsg').textContent = r.mensagem + ' Confira também a caixa de spam.';
+    $('fEmail').classList.add('oculto'); $('fCodigo').classList.remove('oculto'); $('codigo').focus();
+  } catch (err) { $('loginErro').textContent = err.message; $('loginErro').classList.remove('oculto'); }
+});
+$('fCodigo').addEventListener('submit', async e => {
+  e.preventDefault(); $('loginErro').classList.add('oculto');
+  try {
+    const r = await api('login_validar', { email: $('email').value, codigo: $('codigo').value });
+    if (!r.ok) throw new Error(r.erro);
+    S.token = r.token; try { localStorage.setItem('et_token', r.token); } catch (e) {}
+    entrar(r);
+  } catch (err) { $('loginErro').textContent = err.message; $('loginErro').classList.remove('oculto'); }
+});
+$('btOutroEmail').addEventListener('click', () => { $('fCodigo').classList.add('oculto'); $('fEmail').classList.remove('oculto'); });
+function sair(expirou) {
+  if (!expirou && S.token) api('sair', { token: S.token }).catch(() => {});
+  S.token = null; try { localStorage.removeItem('et_token'); } catch (e) {}
+  telaLogin(); if (expirou) { $('loginErro').textContent = 'Sessão expirada. Entre novamente.'; $('loginErro').classList.remove('oculto'); }
+}
+$('btSair').addEventListener('click', () => sair(false));
+async function entrar(u) {
+  $('login').classList.add('oculto'); $('app').classList.remove('oculto');
+  $('usuario').textContent = u.nome || u.email; $('usuario').classList.remove('oculto'); $('btSair').classList.remove('oculto');
+  await seguro(carregarTudo);
+}
+
+// ---------- ABAS ----------
+document.querySelectorAll('nav.abas button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('nav.abas button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('[data-pane]').forEach(p => p.classList.toggle('oculto', p.dataset.pane !== b.dataset.aba));
+  if (b.dataset.aba === 'frequencia') seguro(carregarFrequencia);
+}));
+
+// ---------- DADOS ----------
+async function carregarTudo() {
+  const [e, p] = await Promise.all([chama('encontros'), chama('pessoas')]);
+  S.encontros = e.encontros; S.pessoas = p.pessoas;
+  preencherMunicipios(); desenharEncontros(); preencherSelEncontro(); desenharPessoas();
+  await carregarPresencas();
+}
+function preencherMunicipios() {
+  const ms = [...new Set(S.pessoas.map(p => p.municipio).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt'));
+  for (const id of ['filtroMun', 'freqMun']) { const s = $(id), v = s.value; s.innerHTML = '<option value="">Todos</option>'; ms.forEach(m => s.append(el('option', {}, m))); s.value = v; }
+}
+function preencherSelEncontro() {
+  const s = $('selEncontro'), v = s.value;
+  s.innerHTML = '';
+  if (!S.encontros.length) s.append(el('option', { value: '' }, 'Cadastre um encontro na aba Encontros'));
+  const hoje = new Date().toISOString().slice(0, 10);
+  S.encontros.forEach(e => s.append(el('option', { value: e.id }, tituloEncontro(e) + (e.descricao ? ' – ' + e.descricao : '') + (e.status === 'aberto' ? '  ● ABERTA' : ''))));
+  const aberto = S.encontros.find(e => e.status === 'aberto'), deHoje = S.encontros.find(e => e.data === hoje);
+  s.value = v && S.encontros.some(e => e.id === v) ? v : (aberto || deHoje || S.encontros[S.encontros.length - 1] || {}).id || '';
+}
+const encontroAtual = () => S.encontros.find(e => e.id === $('selEncontro').value);
+const nomeP = p => p.nome || (p.tipo === 'tutor' ? '(tutor sem nome)' : '(nome a importar)');
+const FORMAS = { qr: 'QR code', manual: 'Manual', lista_fisica: 'Lista física', tempo_comunidade: 'Tempo Comunidade', lote: 'Lote' };
+
+// ---------- CHAMADA ----------
+async function carregarPresencas() {
+  const enc = encontroAtual();
+  S.presencas = enc ? (await chama('presencas', { encontro: enc.id })).presencas : [];
+  desenharChamada();
+}
+function desenharChamada() {
+  const enc = encontroAtual();
+  $('btAbrir').classList.toggle('oculto', !enc || enc.status === 'aberto');
+  $('btFechar').classList.toggle('oculto', !enc || enc.status !== 'aberto');
+  $('btTelao').disabled = !enc || enc.status !== 'aberto';
+  const porPessoa = {}; S.presencas.forEach(p => porPessoa[p.pessoa_id] = p);
+  const mun = $('filtroMun').value, busca = $('busca').value.trim().toLowerCase(), bd = soDigitos(busca);
+  const lista = S.pessoas.filter(p => p.situacao !== 'inativo' && (!mun || p.municipio === mun) &&
+    (!busca || (p.nome || '').toLowerCase().includes(busca) || (bd && soDigitos(p.cpf).includes(bd))))
+    .sort((a, b) => (a.municipio || '').localeCompare(b.municipio || '', 'pt') || nomeP(a).localeCompare(nomeP(b), 'pt'));
+  const tb = $('tbChamada'); tb.innerHTML = '';
+  lista.forEach(p => {
+    const pr = porPessoa[p.id];
+    tb.append(el('tr', { class: pr ? 'presente' : '' },
+      el('td', {}, pr ? '' : el('input', { type: 'checkbox', class: 'marca', 'data-id': p.id, style: 'width:auto;min-height:0', 'aria-label': 'Marcar ' + nomeP(p) })),
+      el('td', {}, nomeP(p)), el('td', {}, p.cpf), el('td', {}, p.municipio), el('td', {}, p.tipo),
+      el('td', {}, pr ? el('span', { class: 'selo ok', title: [pr.registrado_por, pr.motivo].filter(Boolean).join(' · ') }, '✓ ' + FORMAS[pr.forma] + ' · ' + pr.hora.slice(11)) : el('span', { class: 'muted' }, 'ausente')),
+      el('td', { class: 'acoes' }, pr
+        ? el('button', { class: 'peq perigo', onclick: () => removerPresenca(pr, p) }, 'Remover')
+        : el('button', { class: 'peq ok', onclick: () => abrirManual(p) }, 'Confirmar presença'))));
+  });
+  const total = S.pessoas.filter(p => p.situacao !== 'inativo' && (!mun || p.municipio === mun));
+  const pres = total.filter(p => porPessoa[p.id]).length;
+  const qr = S.presencas.filter(p => p.forma === 'qr' && total.some(t => t.id === p.pessoa_id)).length;
+  $('resumoChamada').innerHTML = '';
+  [['Presentes', pres], ['Ausentes', total.length - pres], ['Pelo QR code', qr], ['Pela equipe', pres - qr]].forEach(([t, n]) =>
+    $('resumoChamada').append(el('div', { class: 'cartao', style: 'padding:12px' }, el('div', { class: 'num' }, n), el('div', { class: 'muted' }, t))));
+  $('marcarTodos').checked = false;
+}
+['selEncontro'].forEach(id => $(id).addEventListener('change', () => seguro(carregarPresencas)));
+['filtroMun', 'busca'].forEach(id => $(id).addEventListener('input', desenharChamada));
+$('marcarTodos').addEventListener('change', e => document.querySelectorAll('.marca').forEach(c => c.checked = e.target.checked));
+$('btRecarregar').addEventListener('click', () => seguro(carregarTudo));
+$('btAbrir').addEventListener('click', () => seguro(async () => { await chama('encontro_status', { encontro: encontroAtual().id, status: 'aberto' }); await carregarTudo(); aviso('Chamada aberta. Mostre o QR no telão.'); }));
+$('btFechar').addEventListener('click', () => seguro(async () => { if (!confirm('Fechar a chamada? O QR code deixa de funcionar.')) return; await chama('encontro_status', { encontro: encontroAtual().id, status: 'fechado' }); await carregarTudo(); aviso('Chamada fechada.'); }));
+
+let pessoaManual = null;
+function abrirManual(p) { pessoaManual = p; $('dlgQuem').textContent = `${nomeP(p)} · ${p.cpf} · ${p.municipio}`; $('motivoTxt').value = ''; $('dlgManual').showModal(); }
+$('dlgManual').addEventListener('close', () => {
+  if ($('dlgManual').returnValue !== 'ok' || !pessoaManual) return;
+  const motivo = $('motivoSel').value + ($('motivoTxt').value.trim() ? ' – ' + $('motivoTxt').value.trim() : '');
+  const p = pessoaManual; pessoaManual = null;
+  seguro(async () => { await chama('presenca_manual', { encontro: encontroAtual().id, pessoa_id: p.id, motivo }); await carregarPresencas(); aviso('Presença confirmada: ' + nomeP(p)); });
+});
+function removerPresenca(pr, p) {
+  const motivo = prompt(`Remover a presença de ${nomeP(p)}? Informe o motivo:`);
+  if (!motivo || !motivo.trim()) return;
+  seguro(async () => { await chama('presenca_remover', { presenca: pr.id, motivo }); await carregarPresencas(); aviso('Presença removida.'); });
+}
+$('btLote').addEventListener('click', () => {
+  const ids = [...document.querySelectorAll('.marca:checked')].map(c => c.dataset.id);
+  if (!ids.length) return aviso('Marque as pessoas na lista.', 'erro');
+  const forma = $('loteForma').value;
+  if (!confirm(`Registrar presença de ${ids.length} pessoa(s) como "${FORMAS[forma]}"?`)) return;
+  seguro(async () => { const r = await chama('presenca_lote', { encontro: encontroAtual().id, pessoas: ids, forma, motivo: $('loteMotivo').value }); await carregarPresencas(); aviso(`${r.registradas} presença(s) registrada(s).`); });
+});
+
+// ---------- LISTA FÍSICA ----------
+$('btImprimir').addEventListener('click', () => {
+  const enc = encontroAtual(); if (!enc) return;
+  const mun = $('filtroMun').value;
+  const pessoas = S.pessoas.filter(p => p.situacao !== 'inativo' && (!mun || p.municipio === mun));
+  const grupos = {};
+  pessoas.forEach(p => (grupos[p.municipio || 'Sem município'] = grupos[p.municipio || 'Sem município'] || []).push(p));
+  const esc = s => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const paginas = Object.keys(grupos).sort((a, b) => a.localeCompare(b, 'pt')).map(m => {
+    const linhas = grupos[m].sort((a, b) => (a.nome || '~').localeCompare(b.nome || '~', 'pt'))
+      .map((p, i) => `<tr><td class="n">${i + 1}</td><td>${esc(p.nome)}</td><td class="cpf">${esc(p.cpf)}</td><td>${esc(m)}</td><td class="ass"></td></tr>`).join('');
+    return `<section><header><div class="prog">Programa Escola da Terra – MS · UFMS · SED/MS · MEC</div><h1>Lista de presença</h1>
+      <div class="info"><b>${esc(tituloEncontro(enc))}</b>${enc.descricao ? ' – ' + esc(enc.descricao) : ''} · Carga horária: ${enc.carga_horaria}h · Município: <b>${esc(m)}</b></div></header>
+      <table><thead><tr><th class="n">Nº</th><th>Nome</th><th class="cpf">CPF</th><th>Município</th><th class="ass">Assinatura</th></tr></thead><tbody>${linhas}</tbody></table>
+      <footer>Responsável pela chamada: ______________________________________ &nbsp; Data: ____/____/______</footer></section>`;
+  }).join('');
+  const w = window.open('', '_blank');
+  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Lista de presença – ${esc(tituloEncontro(enc))}</title><style>
+    @page{size:A4;margin:14mm 12mm}body{font-family:Arial,Helvetica,sans-serif;font-size:11pt;color:#000;margin:0}
+    section{page-break-after:always}section:last-child{page-break-after:auto}
+    .prog{font-size:9pt;color:#333}h1{font-size:16pt;margin:4px 0}.info{font-size:10pt;margin-bottom:8px}
+    table{width:100%;border-collapse:collapse}th,td{border:1px solid #000;padding:0 6px;height:30px;text-align:left}th{background:#eee;height:24px;font-size:10pt}
+    .n{width:28px;text-align:center}.cpf{width:150px;font-family:monospace;white-space:nowrap}.ass{width:34%}thead{display:table-header-group}tr{page-break-inside:avoid}
+    footer{margin-top:14px;font-size:10pt}</style></head><body>${paginas}<script>window.onload=()=>window.print()<\/script></body></html>`);
+  w.document.close();
+});
+
+// ---------- TELÃO ----------
+let telaoTimer = null;
+$('btTelao').addEventListener('click', () => { const enc = encontroAtual(); if (enc) abrirTelao(enc); });
+async function abrirTelao(enc) {
+  $('telao').classList.remove('oculto'); try { document.documentElement.requestFullscreen && await document.documentElement.requestFullscreen(); } catch (e) {}
+  $('telaoTitulo').textContent = tituloEncontro(enc);
+  const ciclo = async () => {
+    try {
+      const r = await chama('qr', { encontro: enc.id });
+      const url = new URL('index.html', location.href); url.search = new URLSearchParams({ e: enc.id, c: r.codigo }).toString();
+      const qr = qrcode(0, 'M'); qr.addData(url.toString()); qr.make();
+      $('telaoQr').innerHTML = qr.createSvgTag({ cellSize: 8, margin: 2, scalable: true });
+      $('telaoPresentes').textContent = r.presentes;
+      const ms = Math.max(3000, Math.min(30000, r.muda_em_ms + 500));
+      const b = $('telaoBarra'); b.style.transition = 'none'; b.style.width = '100%'; b.offsetWidth; b.style.transition = `width ${ms / 1000}s linear`; b.style.width = '0%';
+      telaoTimer = setTimeout(ciclo, ms);
+    } catch (e) {
+      $('telaoPresentes').textContent = '—'; aviso(e.message, 'erro');
+      telaoTimer = setTimeout(ciclo, 5000);
+    }
+  };
+  ciclo();
+}
+$('btSairTelao').addEventListener('click', () => { clearTimeout(telaoTimer); $('telao').classList.add('oculto'); try { document.fullscreenElement && document.exitFullscreen(); } catch (e) {} seguro(carregarPresencas); });
+
+// ---------- ENCONTROS ----------
+function desenharEncontros() {
+  const tb = $('tbEncontros'); tb.innerHTML = '';
+  S.encontros.forEach(e => tb.append(el('tr', {},
+    el('td', {}, e.roca), el('td', {}, dataBR(e.data)), el('td', {}, e.tipo), el('td', {}, e.carga_horaria + 'h'), el('td', {}, e.descricao || ''),
+    el('td', {}, el('span', { class: 'selo ' + (e.status === 'aberto' ? 'aberto' : '') }, e.status === 'aberto' ? 'aberta' : 'fechada')),
+    el('td', {}, e.presentes),
+    el('td', { class: 'acoes' },
+      el('button', { class: 'peq sec', onclick: () => editarEncontro(e) }, 'Editar'),
+      el('button', { class: 'peq', onclick: () => { $('selEncontro').value = e.id; document.querySelector('[data-aba=chamada]').click(); seguro(carregarPresencas); } }, 'Chamada')))));
+  const tu = S.encontros.filter(e => e.tipo === 'TU').reduce((s, e) => s + e.carga_horaria, 0), tc = S.encontros.filter(e => e.tipo === 'TC').reduce((s, e) => s + e.carga_horaria, 0);
+  $('totalHoras').textContent = `Carga horária cadastrada: ${tu}h de Tempo Universidade + ${tc}h de Tempo Comunidade = ${tu + tc}h (o curso prevê 120h + 60h = 180h).`;
+}
+function editarEncontro(e) {
+  $('encId').value = e.id; $('encRoca').value = e.roca; $('encData').value = e.data; $('encTipo').value = e.tipo; $('encCH').value = e.carga_horaria; $('encDesc').value = e.descricao || '';
+  $('tituloFormEnc').textContent = 'Editar encontro'; $('fEncontro').scrollIntoView({ behavior: 'smooth' });
+}
+$('btEncLimpar').addEventListener('click', () => { $('fEncontro').reset(); $('encId').value = ''; $('tituloFormEnc').textContent = 'Novo encontro'; });
+$('encTipo').addEventListener('change', e => { if (!$('encCH').value) $('encCH').value = e.target.value === 'TC' ? 10 : ''; });
+$('fEncontro').addEventListener('submit', e => {
+  e.preventDefault();
+  seguro(async () => {
+    await chama('encontro_salvar', { encontro: { id: $('encId').value || undefined, roca: $('encRoca').value, data: $('encData').value, tipo: $('encTipo').value, carga_horaria: $('encCH').value, descricao: $('encDesc').value } });
+    $('btEncLimpar').click(); await carregarTudo(); aviso('Encontro salvo.');
+  });
+});
+
+// ---------- FREQUÊNCIA ----------
+const SIT = { ok: 'Em dia', risco: 'Em risco', abaixo: 'Abaixo de 75%' };
+async function carregarFrequencia() { S.freq = await chama('frequencia'); desenharFrequencia(); }
+function filtrarFreq() {
+  const m = $('freqMun').value, s = $('freqSit').value, t = $('freqTipo').value;
+  return S.freq.pessoas.filter(p => p.situacao !== 'inativo' && (!m || p.municipio === m) && (!s || p.situacao_freq === s) && (!t || p.tipo === t))
+    .sort((a, b) => (a.municipio || '').localeCompare(b.municipio || '', 'pt') || nomeP(a).localeCompare(nomeP(b), 'pt'));
+}
+function desenharFrequencia() {
+  if (!S.freq) return;
+  const lista = filtrarFreq();
+  const cont = { ok: 0, risco: 0, abaixo: 0 }; lista.forEach(p => cont[p.situacao_freq]++);
+  $('resumoFreq').innerHTML = '';
+  [['Horas já realizadas', S.freq.horas_ate_agora + 'h de ' + S.freq.total_horas + 'h'], ['Em dia', cont.ok], ['Em risco', cont.risco], ['Abaixo de 75%', cont.abaixo]].forEach(([t, n]) =>
+    $('resumoFreq').append(el('div', { class: 'cartao', style: 'padding:12px' }, el('div', { class: 'num', style: 'font-size:24px' }, n), el('div', { class: 'muted' }, t))));
+  const tb = $('tbFreq'); tb.innerHTML = '';
+  lista.forEach(p => tb.append(el('tr', {}, el('td', {}, nomeP(p)), el('td', {}, p.cpf), el('td', {}, p.municipio), el('td', {}, p.tipo),
+    el('td', {}, p.horas_presentes + 'h'), el('td', {}, p.pct_ate_agora === null ? '—' : p.pct_ate_agora + '%'), el('td', {}, p.pct_curso === null ? '—' : p.pct_curso + '%'),
+    el('td', {}, p.faltas_restantes_h < 0 ? '—' : p.faltas_restantes_h + 'h'), el('td', {}, el('span', { class: 'selo ' + p.situacao_freq }, SIT[p.situacao_freq])))));
+}
+['freqMun', 'freqSit', 'freqTipo'].forEach(id => $(id).addEventListener('change', desenharFrequencia));
+$('btExportar').addEventListener('click', () => {
+  if (!S.freq) return;
+  const encs = S.freq.encontros;
+  const cab = ['Nome', 'CPF (mascarado)', 'Município', 'Tipo', ...encs.map(e => `R${e.roca} ${dataBR(e.data)} ${e.tipo} (${e.carga_horaria}h)`), 'Horas presentes', '% até agora', '% do curso', 'Situação'];
+  const linhas = filtrarFreq().map(p => [nomeP(p), p.cpf, p.municipio, p.tipo, ...encs.map(e => p.encontros.includes(e.id) ? 'P' : 'F'), String(p.horas_presentes).replace('.', ','), p.pct_ate_agora === null ? '' : String(p.pct_ate_agora).replace('.', ','), p.pct_curso === null ? '' : String(p.pct_curso).replace('.', ','), SIT[p.situacao_freq]]);
+  const csv = '﻿' + [cab, ...linhas].map(l => l.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(';')).join('\r\n');
+  const a = el('a', { href: URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })), download: 'frequencia-escola-da-terra.csv' }); document.body.append(a); a.click(); a.remove();
+});
+
+// ---------- PESSOAS ----------
+function desenharPessoas() {
+  const b = $('pesBusca').value.trim().toLowerCase(), bd = soDigitos(b);
+  const tb = $('tbPessoas'); tb.innerHTML = '';
+  S.pessoas.filter(p => !b || (p.nome || '').toLowerCase().includes(b) || (p.municipio || '').toLowerCase().includes(b) || (bd && soDigitos(p.cpf).includes(bd)))
+    .sort((a, c) => (a.municipio || '').localeCompare(c.municipio || '', 'pt') || nomeP(a).localeCompare(nomeP(c), 'pt'))
+    .forEach(p => tb.append(linhaPessoa(p)));
+}
+function linhaPessoa(p) {
+  const nome = el('input', { value: p.nome || '', placeholder: 'Nome completo', style: 'min-height:36px;padding:6px 8px' });
+  const tipo = el('select', { style: 'min-height:36px;padding:6px 8px' }, el('option', { value: 'cursista' }, 'cursista'), el('option', { value: 'tutor' }, 'tutor')); tipo.value = p.tipo || 'cursista';
+  const sit = el('select', { style: 'min-height:36px;padding:6px 8px' }, el('option', { value: 'ativo' }, 'ativo'), el('option', { value: 'inativo' }, 'inativo')); sit.value = p.situacao || 'ativo';
+  return el('tr', {}, el('td', {}, nome), el('td', {}, p.cpf), el('td', {}, p.municipio), el('td', {}, tipo), el('td', {}, sit),
+    el('td', {}, el('button', { class: 'peq', onclick: () => seguro(async () => { await chama('pessoa_atualizar', { id: p.id, nome: nome.value, tipo: tipo.value, situacao: sit.value }); Object.assign(p, { nome: nome.value, tipo: tipo.value, situacao: sit.value }); aviso('Salvo.'); }) }, 'Salvar')));
+}
+$('pesBusca').addEventListener('input', desenharPessoas);
+$('pesCpf').addEventListener('input', e => e.target.value = mascaraCpfDigitando(e.target.value));
+$('btPesCpf').addEventListener('click', () => seguro(async () => {
+  const r = await chama('buscar_cpf', { cpf: $('pesCpf').value });
+  $('pesBusca').value = r.pessoa.cpf; desenharPessoas(); $('pesCpf').value = '';
+}));
+
+// ---------- IMPORTAR ----------
+function lerArquivo(input) { return new Promise((ok, erro) => { const f = input.files[0]; if (!f) return erro(new Error('Escolha um arquivo.')); const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => erro(r.error); r.readAsText(f, 'utf-8'); }); }
+$('arqPessoas').addEventListener('change', () => $('btImpPessoas').disabled = !$('arqPessoas').files.length);
+$('btImpPessoas').addEventListener('click', () => seguro(async () => {
+  const txt = (await lerArquivo($('arqPessoas'))).replace(/^﻿/, '');
+  const linhas = txt.split(/\r?\n/).filter(l => l.trim());
+  const cab = linhas.shift().split(';').map(c => c.trim().toUpperCase());
+  const iCpf = cab.findIndex(c => c.startsWith('CPF')), iIbge = cab.findIndex(c => c.includes('IBGE'));
+  if (iCpf < 0) throw new Error('Não achei a coluna de CPF no arquivo.');
+  const dados = linhas.map(l => { const c = l.split(';'); return { cpf: soDigitos(c[iCpf]), codigo_ibge: iIbge >= 0 ? soDigitos(c[iIbge]) : '' }; });
+  if (!confirm(`Importar ${dados.length} linha(s)?`)) return;
+  const r = await chama('importar_pessoas', { linhas: dados });
+  $('arqPessoas').value = ''; $('btImpPessoas').disabled = true;
+  await carregarTudo(); aviso(`${r.novas} pessoa(s) importada(s); ${r.repetidos} já existiam; ${r.invalidos} CPF(s) inválido(s).`);
+}));
+$('arqNomes').addEventListener('change', async () => { try { $('txtNomes').value = (await lerArquivo($('arqNomes'))).replace(/^﻿/, ''); } catch (e) {} });
+$('btImpNomes').addEventListener('click', () => seguro(async () => {
+  const linhas = $('txtNomes').value.split(/\r?\n/).map(l => l.split(/[;\t]/)).filter(c => c.length >= 2 && soDigitos(c[0]).length >= 9)
+    .map(c => ({ cpf: soDigitos(c[0]), nome: c.slice(1).join(' ').trim() }));
+  if (!linhas.length) throw new Error('Nenhuma linha no formato CPF;Nome.');
+  const r = await chama('importar_nomes', { linhas });
+  $('txtNomes').value = ''; $('arqNomes').value = '';
+  await carregarTudo(); aviso(`${r.atualizados} nome(s) atualizado(s); ${r.nao_encontrados} linha(s) sem CPF correspondente.`);
+}));
+
+// ---------- INÍCIO ----------
+(async () => {
+  if (!S.token) return telaLogin();
+  try { const r = await chama('eu'); entrar(r); } catch (e) { telaLogin(); }
+})();
+</script>
+</body>
+</html>

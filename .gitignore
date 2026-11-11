@@ -1,0 +1,8 @@
+# Nunca versionar listas de pessoas (LGPD)
+*.csv
+*.xlsx
+*.xls
+*.ods
+exportacao*
+node_modules/
+.DS_Store
