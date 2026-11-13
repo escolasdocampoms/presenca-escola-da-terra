@@ -471,8 +471,11 @@ $('btImpPessoas').addEventListener('click', () => seguro(async () => {
   const linhas = txt.split(/\r?\n/).filter(l => l.trim());
   const cab = linhas.shift().split(';').map(c => c.trim().toUpperCase());
   const iCpf = cab.findIndex(c => c.startsWith('CPF')), iIbge = cab.findIndex(c => c.includes('IBGE'));
+  const iNome = cab.findIndex(c => c === 'NOME'), iTipo = cab.findIndex(c => c === 'TIPO');
   if (iCpf < 0) throw new Error('Não achei a coluna de CPF no arquivo.');
-  const dados = linhas.map(l => { const c = l.split(';'); return { cpf: soDigitos(c[iCpf]), codigo_ibge: iIbge >= 0 ? soDigitos(c[iIbge]) : '' }; });
+  const dados = linhas.map(l => { const c = l.split(';'); return {
+    cpf: soDigitos(c[iCpf]), codigo_ibge: iIbge >= 0 ? soDigitos(c[iIbge]) : '',
+    nome: iNome >= 0 ? String(c[iNome] || '').trim() : '', tipo: iTipo >= 0 && /tutor/i.test(c[iTipo] || '') ? 'tutor' : 'cursista' }; });
   if (!confirm(`Importar ${dados.length} linha(s)?`)) return;
   const r = await chama('importar_pessoas', { linhas: dados });
   $('arqPessoas').value = ''; $('btImpPessoas').disabled = true;
@@ -480,8 +483,13 @@ $('btImpPessoas').addEventListener('click', () => seguro(async () => {
 }));
 $('arqNomes').addEventListener('change', async () => { try { $('txtNomes').value = (await lerArquivo($('arqNomes'))).replace(/^﻿/, ''); } catch (e) {} });
 $('btImpNomes').addEventListener('click', () => seguro(async () => {
-  const linhas = $('txtNomes').value.split(/\r?\n/).map(l => l.split(/[;\t]/)).filter(c => c.length >= 2 && soDigitos(c[0]).length >= 9)
-    .map(c => ({ cpf: soDigitos(c[0]), nome: c.slice(1).join(' ').trim() }));
+  // Aceita "CPF;Nome", colunas coladas do Excel (CPF, Nome, ...) ou um CSV com cabeçalho contendo CPF e NOME.
+  let partes = $('txtNomes').value.replace(/^﻿/, '').split(/\r?\n/).filter(l => l.trim()).map(l => l.split(/[;\t]/).map(x => x.trim()));
+  let iCpf = 0, iNome = 1;
+  const cab = partes.find(c => c.some(x => /^nome$/i.test(x)) && c.some(x => /^cpf/i.test(x)));
+  if (cab) { iCpf = cab.findIndex(x => /^cpf/i.test(x)); iNome = cab.findIndex(x => /^nome$/i.test(x)); }
+  const linhas = partes.filter(c => soDigitos(c[iCpf]).length >= 9 && (c[iNome] || '').trim())
+    .map(c => ({ cpf: soDigitos(c[iCpf]), nome: c[iNome].trim() }));
   if (!linhas.length) throw new Error('Nenhuma linha no formato CPF;Nome.');
   const r = await chama('importar_nomes', { linhas });
   $('txtNomes').value = ''; $('arqNomes').value = '';
