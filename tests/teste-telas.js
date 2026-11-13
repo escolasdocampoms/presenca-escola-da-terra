@@ -98,6 +98,10 @@ const srv = http.createServer((req, res) => {
   // lista física
   const [lista] = await Promise.all([pc.waitForEvent('popup'), pc.click('#btImprimir')]);
   await lista.waitForLoadState(); await lista.screenshot({ path: path.join(SAIDA, '7-lista-fisica.png') });
+  const [rel] = await Promise.all([pc.waitForEvent('popup'), pc.click('#btRelatorio')]);
+  await rel.waitForLoadState(); await rel.screenshot({ path: path.join(SAIDA, '7b-relatorio.png') });
+  const relLinhas = await rel.$$eval('tbody tr', t => [t.length, t.filter(x => x.textContent.includes('Ausente')).length]);
+  console.log('relatório: linhas', relLinhas[0], 'ausentes', relLinhas[1], '(esperado 30 e 23)');
   // frequência
   await pc.click('[data-aba=frequencia]'); await pc.waitForSelector('#tbFreq tr');
   await pc.screenshot({ path: path.join(SAIDA, '8-frequencia.png'), fullPage: true });

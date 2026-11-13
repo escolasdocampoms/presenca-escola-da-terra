@@ -80,6 +80,8 @@
       <button id="btFechar" class="perigo oculto">Fechar chamada</button>
       <button id="btTelao" class="sec">Mostrar QR no telão</button>
       <button id="btImprimir" class="sec">Imprimir lista para assinatura</button>
+      <button id="btRelatorio" class="sec">Imprimir relatório da chamada</button>
+      <button id="btRelatorioCsv" class="sec">Baixar chamada (planilha)</button>
       <button id="btRecarregar" class="sec">Atualizar</button>
     </div>
     <div class="grade" id="resumoChamada"></div>
@@ -357,6 +359,46 @@ $('btImprimir').addEventListener('click', () => {
     .n{width:28px;text-align:center}.cpf{width:150px;font-family:monospace;white-space:nowrap}.ass{width:34%}thead{display:table-header-group}tr{page-break-inside:avoid}
     footer{margin-top:14px;font-size:10pt}</style></head><body>${paginas}<script>window.onload=()=>window.print()<\/script></body></html>`);
   w.document.close();
+});
+
+// ---------- RELATÓRIO DA CHAMADA (BACKUP) ----------
+function dadosChamada() {
+  const enc = encontroAtual(); if (!enc) return null;
+  const mun = $('filtroMun').value;
+  const porPessoa = {}; S.presencas.forEach(p => porPessoa[p.pessoa_id] = p);
+  const lista = S.pessoas.filter(p => p.situacao !== 'inativo' && (!mun || p.municipio === mun))
+    .sort((a, b) => (a.municipio || '').localeCompare(b.municipio || '', 'pt') || nomeP(a).localeCompare(nomeP(b), 'pt'))
+    .map(p => ({ p, pr: porPessoa[p.id] }));
+  return { enc, mun, lista };
+}
+$('btRelatorio').addEventListener('click', () => {
+  const d = dadosChamada(); if (!d) return;
+  const esc = s => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const pres = d.lista.filter(x => x.pr).length;
+  const linhas = d.lista.map((x, i) => `<tr class="${x.pr ? '' : 'aus'}"><td class="n">${i + 1}</td><td>${esc(nomeP(x.p))}</td><td class="cpf">${esc(x.p.cpf)}</td><td>${esc(x.p.municipio)}</td><td>${esc(x.p.tipo)}</td>
+    <td><b>${x.pr ? 'Presente' : 'Ausente'}</b></td><td>${x.pr ? esc(FORMAS[x.pr.forma] || x.pr.forma) : ''}</td><td>${x.pr ? esc(x.pr.hora.slice(11)) : ''}</td><td>${x.pr ? esc([x.pr.registrado_por === 'proprio' ? 'o(a) próprio(a)' : x.pr.registrado_por, x.pr.motivo].filter(Boolean).join(' – ')) : ''}</td></tr>`).join('');
+  const w = window.open('', '_blank');
+  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Relatório da chamada – ${esc(tituloEncontro(d.enc))}</title><style>
+    @page{size:A4 landscape;margin:12mm}body{font-family:Arial,Helvetica,sans-serif;font-size:10pt;margin:0}
+    .prog{font-size:9pt;color:#333}h1{font-size:15pt;margin:4px 0}.info{margin-bottom:8px}
+    table{width:100%;border-collapse:collapse}th,td{border:1px solid #000;padding:3px 5px;text-align:left}th{background:#eee}
+    tr.aus td{background:#f3f3f3}.n{width:26px;text-align:center}.cpf{white-space:nowrap;font-family:monospace}thead{display:table-header-group}tr{page-break-inside:avoid}
+    footer{margin-top:10px;font-size:9pt;color:#333}</style></head><body>
+    <div class="prog">Programa Escola da Terra – MS · UFMS · SED/MS · MEC</div><h1>Relatório da chamada</h1>
+    <div class="info"><b>${esc(tituloEncontro(d.enc))}</b>${d.enc.descricao ? ' – ' + esc(d.enc.descricao) : ''} · Carga horária: ${d.enc.carga_horaria}h · Município: <b>${esc(d.mun || 'todos')}</b><br>
+    Presentes: <b>${pres}</b> · Ausentes: <b>${d.lista.length - pres}</b> · Total: ${d.lista.length}</div>
+    <table><thead><tr><th class="n">Nº</th><th>Nome</th><th>CPF</th><th>Município</th><th>Tipo</th><th>Situação</th><th>Forma</th><th>Hora</th><th>Registrado por / motivo</th></tr></thead><tbody>${linhas}</tbody></table>
+    <footer>Gerado em ${new Date().toLocaleString('pt-BR')} por ${esc($('usuario').textContent)}.</footer>
+    <script>window.onload=()=>window.print()<\/script></body></html>`);
+  w.document.close();
+});
+$('btRelatorioCsv').addEventListener('click', () => {
+  const d = dadosChamada(); if (!d) return;
+  const cab = ['Nº', 'Nome', 'CPF (mascarado)', 'Município', 'Tipo', 'Situação', 'Forma', 'Hora', 'Registrado por', 'Motivo'];
+  const linhas = d.lista.map((x, i) => [i + 1, nomeP(x.p), x.p.cpf, x.p.municipio, x.p.tipo, x.pr ? 'Presente' : 'Ausente', x.pr ? (FORMAS[x.pr.forma] || x.pr.forma) : '', x.pr ? x.pr.hora : '', x.pr ? x.pr.registrado_por : '', x.pr ? x.pr.motivo : '']);
+  const csv = '\ufeff' + [[tituloEncontro(d.enc) + (d.mun ? ' – ' + d.mun : '')], cab, ...linhas].map(l => l.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(';')).join('\r\n');
+  const nome = 'chamada-roca' + d.enc.roca + '-' + d.enc.data + (d.mun ? '-' + d.mun.normalize('NFD').replace(/[^\w]+/g, '-') : '') + '.csv';
+  const a = el('a', { href: URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })), download: nome }); document.body.append(a); a.click(); a.remove();
 });
 
 // ---------- TELÃO ----------
