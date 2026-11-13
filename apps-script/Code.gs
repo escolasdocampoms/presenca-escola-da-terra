@@ -75,7 +75,7 @@ function doPost(e) {
     var privadas = {
       eu: function () { return { ok: true, email: usuario.email, nome: usuario.nome }; },
       sair: sair_,
-      encontros: listarEncontros_, encontro_salvar: salvarEncontro_, encontro_status: statusEncontro_,
+      encontros: listarEncontros_, encontro_salvar: salvarEncontro_, encontro_status: statusEncontro_, encontro_excluir: excluirEncontro_,
       qr: qrAtual_, pessoas: listarPessoas_, pessoa_atualizar: atualizarPessoa_,
       presencas: presencasEncontro_, presenca_manual: presencaManual_, presenca_lote: presencaLote_,
       presenca_remover: presencaRemover_, frequencia: frequencia_, buscar_cpf: buscarCpf_,
@@ -260,6 +260,25 @@ function salvarEncontro_(req, u) {
     sh.appendRow([id, roca, e.data, e.tipo, ch, e.descricao || '', 'fechado', '', '']);
     log_(u.email, 'encontro_criar', id);
     return { ok: true, id: id };
+  } finally { lock.releaseLock(); }
+}
+
+/** Exclui o encontro. Se houver presenças, exige confirmação (forcar=true); elas ficam marcadas como removidas. */
+function excluirEncontro_(req, u) {
+  var motivo = String(req.motivo || '').trim();
+  if (!motivo) return { ok: false, erro: 'Informe o motivo da exclusão.' };
+  var lock = LockService.getScriptLock(); lock.waitLock(25000);
+  try {
+    var r = linhaPorId_('Encontros', req.encontro);
+    if (!r) return { ok: false, erro: 'Encontro não encontrado.' };
+    var shP = aba_('Presencas'); var v = shP.getDataRange().getValues(); var linhas = [];
+    for (var i = 1; i < v.length; i++) if (String(v[i][2]) === String(req.encontro) && v[i][7] !== 'nao') linhas.push(i + 1);
+    if (linhas.length && !req.forcar) return { ok: false, precisa_confirmar: true, presencas: linhas.length, erro: 'Este encontro tem ' + linhas.length + ' presença(s) registrada(s).' };
+    var cache = CacheService.getScriptCache();
+    linhas.forEach(function (n) { shP.getRange(n, 8).setValue('nao'); cache.remove('pres_' + v[n - 1][2] + '_' + v[n - 1][1]); });
+    aba_('Encontros').deleteRow(r);
+    log_(u.email, 'encontro_excluir', req.encontro + ' – ' + linhas.length + ' presença(s) removida(s) – ' + motivo);
+    return { ok: true, presencas_removidas: linhas.length };
   } finally { lock.releaseLock(); }
 }
 

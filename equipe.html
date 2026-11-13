@@ -393,9 +393,25 @@ function desenharEncontros() {
     el('td', {}, e.presentes),
     el('td', { class: 'acoes' },
       el('button', { class: 'peq sec', onclick: () => editarEncontro(e) }, 'Editar'),
-      el('button', { class: 'peq', onclick: () => { $('selEncontro').value = e.id; document.querySelector('[data-aba=chamada]').click(); seguro(carregarPresencas); } }, 'Chamada')))));
+      el('button', { class: 'peq', onclick: () => { $('selEncontro').value = e.id; document.querySelector('[data-aba=chamada]').click(); seguro(carregarPresencas); } }, 'Chamada'),
+      el('button', { class: 'peq perigo', onclick: () => excluirEncontro(e) }, 'Excluir')))));
   const tu = S.encontros.filter(e => e.tipo === 'TU').reduce((s, e) => s + e.carga_horaria, 0), tc = S.encontros.filter(e => e.tipo === 'TC').reduce((s, e) => s + e.carga_horaria, 0);
   $('totalHoras').textContent = `Carga horária cadastrada: ${tu}h de Tempo Universidade + ${tc}h de Tempo Comunidade = ${tu + tc}h (o curso prevê 120h + 60h = 180h).`;
+}
+function excluirEncontro(e) {
+  const motivo = prompt(`Excluir o encontro "${tituloEncontro(e)}"?\nInforme o motivo:`);
+  if (!motivo || !motivo.trim()) return;
+  seguro(async () => {
+    let r = await api('encontro_excluir', { token: S.token, encontro: e.id, motivo });
+    if (!r.ok && r.precisa_confirmar) {
+      if (!confirm(`${r.erro}\nSe excluir, essas presenças deixam de contar na frequência (continuam guardadas na planilha como removidas).\n\nExcluir mesmo assim?`)) return;
+      r = await api('encontro_excluir', { token: S.token, encontro: e.id, motivo, forcar: true });
+    }
+    if (r.sessao === false) return sair(true);
+    if (!r.ok) throw new Error(r.erro);
+    await carregarTudo();
+    aviso('Encontro excluído' + (r.presencas_removidas ? ` (${r.presencas_removidas} presença(s) removida(s)).` : '.'));
+  });
 }
 function editarEncontro(e) {
   $('encId').value = e.id; $('encRoca').value = e.roca; $('encData').value = e.data; $('encTipo').value = e.tipo; $('encCH').value = e.carga_horaria; $('encDesc').value = e.descricao || '';

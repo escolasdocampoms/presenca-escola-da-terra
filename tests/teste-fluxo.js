@@ -114,6 +114,19 @@ caso('fechar chamada bloqueia check-in', () => {
   post({ acao: 'encontro_status', token, encontro: enc, status: 'fechado' });
   assert(/não está aberta/.test(post({ acao: 'checkin', encontro: enc, codigo, cpf: cpfs[3] }).erro));
 });
+caso('excluir encontro: pede motivo, confirmação se houver presenças e tira da frequência', () => {
+  const vazio = post({ acao: 'encontro_salvar', token, encontro: { roca: 3, data: '2027-02-01', tipo: 'TU', carga_horaria: 4 } }).id;
+  assert(!post({ acao: 'encontro_excluir', token, encontro: vazio }).ok, 'sem motivo deve recusar');
+  assert(post({ acao: 'encontro_excluir', token, encontro: vazio, motivo: 'cadastrado errado' }).ok);
+  const antes = post({ acao: 'frequencia', token }).total_horas;
+  const r1 = post({ acao: 'encontro_excluir', token, encontro: enc, motivo: 'teste' });
+  assert(!r1.ok && r1.precisa_confirmar && r1.presencas === 122);
+  const r2 = post({ acao: 'encontro_excluir', token, encontro: enc, motivo: 'teste', forcar: true });
+  assert(r2.ok && r2.presencas_removidas === 122);
+  const f = post({ acao: 'frequencia', token });
+  assert.strictEqual(f.total_horas, antes - 8);
+  assert(!post({ acao: 'encontros', token }).encontros.some(e => e.id === enc));
+});
 caso('sair encerra a sessão', () => {
   post({ acao: 'sair', token }); assert(!post({ acao: 'eu', token }).ok);
 });
